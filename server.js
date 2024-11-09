@@ -1,11 +1,15 @@
 const express = require ("express")
-
-const app = express()
-
+const helmet = require('helmet');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-app.get("/",async(req,res)=>{
+const app = express()
+
+app.use(express.json());
+app.use(helmet());
+app.use(rateLimiter);
+
+app.get("/processTransaction",async(req,res)=>{
     const transaction = await prisma.transaction.create({
         data: {
           encryptedPan: "1212",
