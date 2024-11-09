@@ -2,10 +2,22 @@ const express = require ("express")
 
 const app = express()
 
-app.get("/",(req,res)=>{
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+app.get("/",async(req,res)=>{
+    const transaction = await prisma.transaction.create({
+        data: {
+          encryptedPan: "1212",
+          encryptedExp: "2112",
+          amount: 1000,
+          status: 'PROCESSED'
+        }
+      });
+
     res.json({
         status:"success",
-        message:"Api up and runnig "
+        transactionId: transaction.id,
     })
 })
 
