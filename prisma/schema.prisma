@@ -13,12 +13,212 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum TransactionType {
+  DEBIT
+  CREDIT
+  TRANSFER
+}
+
 model Transaction {
-  id            String   @id @default(uuid())
-  encryptedPan  String
-  encryptedExp  String
-  amount        Decimal
-  status        String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String          @id @default(uuid())
+  email        String
+  // encryptedPan String
+  // encryptedExp String
+  // maskedPan    String
+  amount       Decimal
+  status       TransactionStatus
+  type         TransactionType
+  description  String?
+  wallet       Wallet          @relation(fields: [walletId], references: [id])
+  walletId     String
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model ArchivedTransactions {
+  id           String   @id @default(uuid())
+  email        String
+  encryptedPan String
+  encryptedExp String
+  maskedPan    String
+  amount       Decimal
+  status       String
+  createdAt    DateTime
+  updatedAt    DateTime
+  archivedAt   DateTime @default(now())
+}
+
+model User {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  password       String
+  name           String?
+  BVN            String?  @unique
+  NIN            String?  @unique
+  kycLevel       KYCLevel @default(TIER_1)
+  isKYCValidated Boolean  @default(false)
+  accountNo      String?   @unique
+  wallet         Wallet?
+  walletId       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  Savings Savings[]
+}
+
+model Wallet {
+  id           String        @id @default(uuid())
+  user         User          @relation(fields: [userId], references: [id])
+  userId       String        @unique
+  balance      Decimal       @default(0.00)
+  debitLimit   Decimal       @default(0.00)
+  creditLimit  Decimal       @default(0.00)
+  tier         WalletTier    @relation(fields: [tierId], references: [id])
+  tierId       String        @default("TIER_1")
+  dailyDebitUsed    Decimal  @default(0.00)
+  dailyTransferUsed  Decimal @default(0.00)
+  transactions Transaction[]
+
+  SavingsTransaction SavingsTransaction[]
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum ProviderTransactionType {
+  FUNDING
+  WITHDRAWAL
+}
+
+enum Provider {
+  PAYSTACK
+}
+
+model ProviderTransaction {
+  id               String                 @id @default(uuid())
+  amount           Decimal
+  email            String
+  type             ProviderTransactionType
+  status           TransactionStatus
+  provider         Provider
+  reference        String?                @unique
+  providerReference String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+}
+
+// Add these to your existing schema
+model InternalAccount {
+  id          String   @id @default(uuid())
+  type        InternalAccountType
+  balance     Decimal  @default(0.00)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum InternalAccountType {
+  PAYABLE
+  RECEIVABLE
+}
+
+enum KYCLevel {
+  TIER_1  // No KYC
+  TIER_2  // BVN verified
+  TIER_3  // NIN verified
+}
+
+model WalletTier {
+  id                String   @id @default(uuid())
+  level            KYCLevel
+  maxBalance       Decimal
+  dailyDebitLimit  Decimal
+  dailyTransferLimit Decimal
+  monthlyTransferLimit Decimal
+  description      String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  wallets         Wallet[]
+}
+
+enum SavingsType {
+  FIXED
+  FLEXIBLE
+}
+
+enum FrequencyType {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum SavingsStatus {
+  ACTIVE
+  COMPLETED
+  TERMINATED
+}
+
+model Savings {
+  id              String        @id @default(uuid())
+  name            String
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  type            SavingsType
+  targetAmount    Decimal
+  currentBalance  Decimal       @default(0.00)
+  startDate       DateTime      @default(now())
+  maturityDate    DateTime
+  interestRate    Decimal
+  status          SavingsStatus @default(ACTIVE)
+  categoryId      String?
+  category        SavingsCategory? @relation(fields: [categoryId], references: [id])
+  autoSave        Boolean       @default(false)
+  autoSaveAmount  Decimal?
+  frequencyType   FrequencyType?
+  lastAutoSaveDate DateTime?
+  transactions    SavingsTransaction[]
+  interestLogs    InterestLog[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model SavingsCategory {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  interestRate Decimal
+  minimumAmount Decimal
+  maximumAmount Decimal?
+  minimumDuration Int     // in days
+  maximumDuration Int?    // in days
+  earlyWithdrawalPenalty Decimal @default(0)
+  savings     Savings[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model SavingsTransaction {
+  id          String    @id @default(uuid())
+  savingsId   String
+  savings     Savings   @relation(fields: [savingsId], references: [id])
+  amount      Decimal
+  type        TransactionType
+  walletId    String
+  wallet      Wallet    @relation(fields: [walletId], references: [id])
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model InterestLog {
+  id          String    @id @default(uuid())
+  savingsId   String
+  savings     Savings   @relation(fields: [savingsId], references: [id])
+  amount      Decimal
+  calculatedAt DateTime
+  appliedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }

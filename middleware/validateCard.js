@@ -29,6 +29,14 @@ const validateCard = (req, res, next) => {
     if (expiry < new Date()) {
       return res.status(400).json({ error: 'Card has expired' });
     }
+
+    const amountPattern = /^\d+(\.\d{1,2})?$/;
+    if (typeof amount !== 'number' || amount < 0 || !amountPattern.test(amount.toString())) {
+      return res.status(400).json({ error: 'Invalid amount. Must be a non-negative number with up to two decimal places.' });
+    }
+  
   
     next();
   };
+
+  module.exports={validateCard}

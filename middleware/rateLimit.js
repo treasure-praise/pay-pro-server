@@ -5,3 +5,6 @@ const rateLimiter = rateLimit({
     max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS),
   message: 'Too many requests from this IP, please try again later.'
 })
+
+
+module.exports={rateLimiter}

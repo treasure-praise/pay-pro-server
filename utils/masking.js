@@ -7,3 +7,5 @@ class Masking {
       return '**/**';
     }
   }
+
+  module.exports = {Masking};
